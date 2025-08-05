@@ -56,7 +56,20 @@ import {
   Heart
 } from 'lucide-react';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Configuration
+let BACKEND_URL = 'http://localhost:8001'; // Default fallback
+
+// Load configuration from backend
+fetch('/config')
+  .then(res => res.json())
+  .then(config => {
+    BACKEND_URL = config.backend_url;
+  })
+  .catch(() => {
+    // Use default if config fetch fails
+    console.warn('Using default backend URL');
+  });
+
 const API = `${BACKEND_URL}/api`;
 
 // Authentication context
