@@ -18,6 +18,7 @@ import hashlib
 from enum import Enum
 import json
 import logging
+import random
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
