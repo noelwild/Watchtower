@@ -537,7 +537,24 @@ async def initialize_sample_data():
                 )
                 session.add(user)
                 
-                # Create member
+                # Create member with enhanced information
+                qualifications = []
+                if user_data['rank'] in ['Sergeant', 'Inspector']:
+                    qualifications.extend(['Leadership', 'Advanced Training'])
+                if user_data['station'] == 'geelong':
+                    qualifications.append('Geelong Operations')
+                else:
+                    qualifications.append('Corio Operations')
+                
+                # Add random specialized qualifications
+                import random
+                potential_quals = ['Traffic Operations', 'Community Policing', 'Criminal Investigation', 
+                                 'Emergency Response', 'Court Security', 'Firearms Training']
+                qualifications.extend(random.sample(potential_quals, random.randint(1, 3)))
+                
+                # Random OSTT qualification date (within last 2 years)
+                ostt_date = datetime.utcnow() - timedelta(days=random.randint(30, 730))
+                
                 member = Member(
                     id=str(uuid.uuid4()),
                     vp_number=user_data['vp_number'],
@@ -546,6 +563,9 @@ async def initialize_sample_data():
                     station=user_data['station'],
                     rank=user_data['rank'],
                     seniority_years=user_data['seniority_years'],
+                    special_qualifications=json.dumps(qualifications),
+                    ostt_qualification_date=ostt_date,
+                    ada_driver_authority=random.choice([True, False]),  # Random driver authority
                     preferences_json=json.dumps(MemberPreferences().dict())
                 )
                 session.add(member)
