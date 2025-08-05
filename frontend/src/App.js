@@ -711,6 +711,7 @@ const Login = () => {
                   const passValue = passInput?.value?.trim();
                   
                   console.log('🔧 MANUAL TEST: VP =', vpValue, 'Password =', passValue?.substring(0, 3) + '***');
+                  console.log('🔧 MANUAL TEST: API URL =', `${API}/auth/login`);
                   
                   if (!vpValue || !passValue) {
                     alert('❌ Please fill in both VP Number and Password fields first!');
