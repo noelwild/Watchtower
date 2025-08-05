@@ -630,6 +630,30 @@ const Login = () => {
               </Button>
             </form>
             
+            {/* TEST LOGIN BUTTON - Remove this later */}
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <Button 
+                type="button"
+                onClick={async () => {
+                  setLoading(true);
+                  setError('');
+                  console.log('Test login clicked - attempting login with VP12345/password123');
+                  const success = await login('VP12345', 'password123');
+                  console.log('Test login result:', success);
+                  if (success) {
+                    navigate('/');
+                  } else {
+                    setError('Test login failed - check console for details');
+                  }
+                  setLoading(false);
+                }}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
+                disabled={loading}
+              >
+                🧪 TEST LOGIN (VP12345) - Remove Later
+              </Button>
+            </div>
+            
             <div className="mt-6 text-center">
               <p className="text-slate-400 text-sm">Demo Credentials:</p>
               <p className="text-slate-300 text-xs">Inspector: VP12345 / password123</p>
