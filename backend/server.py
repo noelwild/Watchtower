@@ -933,6 +933,13 @@ async def startup_event():
 async def root():
     return {"message": "WATCHTOWER API v2.0 - SQLite Edition"}
 
+@app.get("/config")
+async def get_config():
+    """Provide frontend configuration"""
+    return {
+        "backend_url": CONFIG.get('BACKEND_URL', 'http://localhost:8001')
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
