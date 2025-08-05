@@ -2904,21 +2904,21 @@ const RosterProducer = ({ user }) => {
                 
                 {/* Compliance Status */}
                 <div className="mt-4 p-3 rounded-lg" style={{
-                  backgroundColor: currentRoster.compliance_status.has_violations ? '#fef2f2' : '#f0fdf4',
-                  border: `1px solid ${currentRoster.compliance_status.has_violations ? '#fecaca' : '#bbf7d0'}`
+                  backgroundColor: currentRoster.compliance_status?.has_violations ? '#fef2f2' : '#f0fdf4',
+                  border: `1px solid ${currentRoster.compliance_status?.has_violations ? '#fecaca' : '#bbf7d0'}`
                 }}>
                   <h4 className={`font-semibold text-sm mb-2 ${
-                    currentRoster.compliance_status.has_violations ? 'text-red-800' : 'text-green-800'
+                    currentRoster.compliance_status?.has_violations ? 'text-red-800' : 'text-green-800'
                   }`}>
                     EBA Compliance Status
                   </h4>
                   
-                  {currentRoster.compliance_status.has_violations ? (
+                  {currentRoster.compliance_status?.has_violations ? (
                     <div>
-                      <p className="text-red-700 text-sm mb-2">⚠️ {currentRoster.compliance_status.violations.length} violations found</p>
-                      {currentRoster.compliance_status.violations.slice(0, 3).map((violation, index) => (
+                      <p className="text-red-700 text-sm mb-2">⚠️ {currentRoster.compliance_status.violations?.length || 0} violations found</p>
+                      {currentRoster.compliance_status.violations?.slice(0, 3).map((violation, index) => (
                         <p key={index} className="text-xs text-red-600 mb-1">• {violation}</p>
-                      ))}
+                      )) || []}
                     </div>
                   ) : (
                     <p className="text-green-700 text-sm">✅ All EBA compliance rules satisfied</p>
