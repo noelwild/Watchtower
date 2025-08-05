@@ -1886,6 +1886,60 @@ const Dashboard = () => {
             onUpdate={fetchData}
           />
         )}
+
+        {/* Roster Management Modal */}
+        {showRosterManagement && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-0 w-full max-w-4xl max-h-[80vh] overflow-hidden">
+              <div className="px-6 py-4 border-b bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold flex items-center space-x-2">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <span>Roster Management</span>
+                  </h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setShowRosterManagement(false)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <RosterProducer user={user} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Welfare Modal */}
+        {showWelfare && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-0 w-full max-w-4xl max-h-[80vh] overflow-hidden">
+              <div className="px-6 py-4 border-b bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold flex items-center space-x-2">
+                    <Heart className="w-5 h-5 text-red-600" />
+                    <span>Welfare Management</span>
+                  </h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setShowWelfare(false)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <WelfareManagement user={user} members={members} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
