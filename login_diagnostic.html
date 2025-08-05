@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WATCHTOWER Login Diagnostic</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+        .test-button { background: #28a745; color: white; border: none; }
+        .regular-button { background: #007bff; color: white; border: none; }
+    </style>
+</head>
+<body>
+    <h1>🔧 WATCHTOWER Login Diagnostic Tool</h1>
+    <p>This tool helps diagnose authentication issues with the WATCHTOWER system.</p>
+
+    <div id="results"></div>
+
+    <div class="test info">
+        <h3>Quick Tests</h3>
+        <button class="test-button" onclick="testBackendConnection()">Test Backend Connection</button>
+        <button class="test-button" onclick="testDemoCredentials()">Test Demo Credentials</button>
+        <button class="test-button" onclick="testAllUsers()">Test All Demo Users</button>
+        <button class="regular-button" onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test info">
+        <h3>Manual Login Test</h3>
+        <input type="text" id="vpNumber" placeholder="VP Number" value="VP12345">
+        <input type="password" id="password" placeholder="Password" value="password123">
+        <button class="regular-button" onclick="testManualLogin()">Test Manual Login</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+        
+        function addResult(html, className = 'info') {
+            const div = document.createElement('div');
+            div.className = `test ${className}`;
+            div.innerHTML = html;
+            document.getElementById('results').appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testBackendConnection() {
+            try {
+                const response = await fetch(`${API_BASE}/`);
+                const data = await response.json();
+                addResult(`
+                    <h3>✅ Backend Connection Test</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Response:</strong></p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `, 'success');
+            } catch (error) {
+                addResult(`
+                    <h3>❌ Backend Connection Test</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Backend may not be running on ${API_BASE}</p>
+                `, 'error');
+            }
+        }
+
+        async function testDemoCredentials() {
+            const credentials = { vp_number: 'VP12345', password: 'password123' };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(credentials)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`
+                        <h3>✅ Demo Credentials Test (VP12345)</h3>
+                        <p><strong>Status:</strong> Login Successful</p>
+                        <p><strong>User:</strong> ${data.user.name} (${data.user.role})</p>
+                        <p><strong>Station:</strong> ${data.user.station}</p>
+                        <p><strong>Token:</strong> ${data.access_token.substring(0, 50)}...</p>
+                    `, 'success');
+                } else {
+                    addResult(`
+                        <h3>❌ Demo Credentials Test (VP12345)</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Error:</strong> ${data.detail}</p>
+                    `, 'error');
+                }
+            } catch (error) {
+                addResult(`
+                    <h3>❌ Demo Credentials Test (VP12345)</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `, 'error');
+            }
+        }
+
+        async function testAllUsers() {
+            const users = [
+                { vp_number: 'VP12345', password: 'password123', name: 'Sarah Connor', role: 'Inspector' },
+                { vp_number: 'VP12346', password: 'password123', name: 'John Smith', role: 'Sergeant' },
+                { vp_number: 'VP12347', password: 'password123', name: 'Mike Johnson', role: 'General Duties' }
+            ];
+
+            for (const user of users) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ vp_number: user.vp_number, password: user.password })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        addResult(`
+                            <h4>✅ ${user.vp_number} (${user.name})</h4>
+                            <p>Role: ${data.user.role} | Station: ${data.user.station}</p>
+                        `, 'success');
+                    } else {
+                        addResult(`
+                            <h4>❌ ${user.vp_number} (${user.name})</h4>
+                            <p>Error: ${data.detail}</p>
+                        `, 'error');
+                    }
+                } catch (error) {
+                    addResult(`
+                        <h4>❌ ${user.vp_number} (${user.name})</h4>
+                        <p>Error: ${error.message}</p>
+                    `, 'error');
+                }
+            }
+        }
+
+        async function testManualLogin() {
+            const vpNumber = document.getElementById('vpNumber').value;
+            const password = document.getElementById('password').value;
+            
+            if (!vpNumber || !password) {
+                addResult(`
+                    <h3>❌ Manual Login Test</h3>
+                    <p>Please enter both VP Number and Password</p>
+                `, 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vp_number: vpNumber.toUpperCase(), password: password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`
+                        <h3>✅ Manual Login Test</h3>
+                        <p><strong>VP Number:</strong> ${vpNumber}</p>
+                        <p><strong>User:</strong> ${data.user.name} (${data.user.role})</p>
+                        <p><strong>Station:</strong> ${data.user.station}</p>
+                        <p><strong>Login Status:</strong> Successful</p>
+                    `, 'success');
+                } else {
+                    addResult(`
+                        <h3>❌ Manual Login Test</h3>
+                        <p><strong>VP Number:</strong> ${vpNumber}</p>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Error:</strong> ${data.detail}</p>
+                    `, 'error');
+                }
+            } catch (error) {
+                addResult(`
+                    <h3>❌ Manual Login Test</h3>
+                    <p><strong>VP Number:</strong> ${vpNumber}</p>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `, 'error');
+            }
+        }
+
+        // Auto-run basic tests on page load
+        window.onload = function() {
+            addResult(`
+                <h3>🔧 Diagnostic Tool Loaded</h3>
+                <p>Backend URL: <strong>${API_BASE}</strong></p>
+                <p>Click the buttons above to run various authentication tests.</p>
+                <p>All tests will appear below in chronological order.</p>
+            `, 'info');
+        };
+    </script>
+</body>
+</html>
