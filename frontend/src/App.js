@@ -1498,6 +1498,8 @@ const Dashboard = () => {
   const [selectedMember, setSelectedMember] = useState(null);
   const [categoryModal, setCategoryModal] = useState({ isOpen: false, category: null });
   const [detailedMemberView, setDetailedMemberView] = useState({ isOpen: false, member: null });
+  const [showRosterManagement, setShowRosterManagement] = useState(false);
+  const [showWelfare, setShowWelfare] = useState(false);
   const { user } = useAuth();
 
   const fetchData = async () => {
