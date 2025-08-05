@@ -2070,41 +2070,60 @@ const DetailedMemberView = ({ member, isOpen, onClose }) => {
                 <div className="space-y-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Shift Type Distribution (Last 12 weeks)</CardTitle>
+                      <CardTitle>Weekly Hours Trend (Last 12 weeks)</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {Object.entries(memberDetails.shift_breakdown.shift_types).map(([type, count]) => (
-                          <div key={type} className="text-center p-4 bg-slate-50 rounded-lg">
-                            <p className="text-2xl font-bold text-blue-600">{count}</p>
-                            <p className="text-sm text-slate-600 capitalize">{type.replace('_', ' ')} Shifts</p>
+                      <div className="space-y-3">
+                        {memberDetails.shift_breakdown?.slice(0, 8)?.map((week, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                            <span className="text-sm font-medium">
+                              {week.week} ({week.start_date})
+                            </span>
+                            <div className="flex items-center space-x-4">
+                              <span className="text-sm text-slate-600">{week.shift_count} shifts</span>
+                              <span className={`font-medium ${
+                                week.total_hours > 40 ? 'text-red-600' : week.total_hours > 35 ? 'text-orange-600' : 'text-green-600'
+                              }`}>
+                                {week.total_hours}h
+                              </span>
+                            </div>
                           </div>
-                        ))}
+                        )) || (
+                          <div className="text-center py-8 text-slate-500">
+                            <BarChart3 className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                            <p>No shift data available</p>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card>
                     <CardHeader>
-                      <CardTitle>Weekly Hours Trend</CardTitle>
+                      <CardTitle>Shift Type Summary</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-3">
-                        {memberDetails.shift_breakdown.weekly_hours.slice(0, 8).map((week, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                            <span className="text-sm font-medium">
-                              Week {formatDate(week.week_start)}
-                            </span>
-                            <div className="flex items-center space-x-4">
-                              <span className="text-sm text-slate-600">{week.shifts} shifts</span>
-                              <span className={`font-medium ${
-                                week.hours > 40 ? 'text-red-600' : week.hours > 35 ? 'text-orange-600' : 'text-green-600'
-                              }`}>
-                                {week.hours}h
-                              </span>
-                            </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {memberDetails.shift_breakdown?.reduce((acc, week) => {
+                          week.shift_types?.forEach(type => {
+                            acc[type] = (acc[type] || 0) + 1;
+                          });
+                          return acc;
+                        }, {}) && Object.entries(memberDetails.shift_breakdown.reduce((acc, week) => {
+                          week.shift_types?.forEach(type => {
+                            acc[type] = (acc[type] || 0) + 1;
+                          });
+                          return acc;
+                        }, {})).map(([type, count]) => (
+                          <div key={type} className="text-center p-4 bg-slate-50 rounded-lg">
+                            <p className="text-2xl font-bold text-blue-600">{count}</p>
+                            <p className="text-sm text-slate-600 capitalize">{type.replace('_', ' ')} Weeks</p>
                           </div>
-                        ))}
+                        )) || (
+                          <div className="col-span-full text-center py-4 text-slate-500">
+                            <p>No shift type data available</p>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
