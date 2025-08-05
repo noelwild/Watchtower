@@ -503,12 +503,7 @@ async def initialize_sample_data():
             if user_count > 0:
                 return {"message": "Sample data already exists"}
             
-            # Create demo users from config
-            demo_users_config = [
-                line for line in CONFIG.get('DEMO_USER_1', '').split(':') if line,
-                line for line in CONFIG.get('DEMO_USER_2', '').split(':') if line,
-                line for line in CONFIG.get('DEMO_USER_3', '').split(':') if line
-            ]
+            # Parse demo users from config
             
             # Parse demo users
             demo_users = []
