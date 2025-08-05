@@ -919,6 +919,221 @@ async def get_detailed_member_view(member_id: str, current_user: dict = Depends(
             }
         }
 
+# Roster Generation and Management Endpoints
+
+class RosterGenerationConfig(BaseModel):
+    station: str
+    period_weeks: int = 2
+    min_van_coverage: int = 2
+    min_watchhouse_coverage: int = 1
+    enable_fatigue_balancing: bool = True
+    consider_preferences: bool = True
+    fair_corro_rotation: bool = True
+
+@api_router.get("/roster/periods")
+async def get_roster_periods(station: str, db=Depends(get_db)):
+    """Get all roster periods for a station"""
+    try:
+        roster_periods = db.query(RosterPeriod).filter(
+            RosterPeriod.station == station
+        ).order_by(RosterPeriod.start_date.desc()).all()
+        
+        return [model_to_dict(period) for period in roster_periods]
+    except Exception as e:
+        logger.error(f"Error fetching roster periods: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch roster periods")
+
+@api_router.post("/roster/generate")
+async def generate_roster(config: RosterGenerationConfig, db=Depends(get_db)):
+    """Generate a new roster based on configuration"""
+    try:
+        # Create a new roster period
+        start_date = datetime.utcnow().date()
+        end_date = start_date + timedelta(weeks=config.period_weeks)
+        
+        roster_period = RosterPeriod(
+            id=str(uuid.uuid4()),
+            station=config.station,
+            start_date=start_date,
+            end_date=end_date,
+            status='draft',
+            created_by='system',
+            configuration=json.dumps({
+                'min_van_coverage': config.min_van_coverage,
+                'min_watchhouse_coverage': config.min_watchhouse_coverage,
+                'enable_fatigue_balancing': config.enable_fatigue_balancing,
+                'consider_preferences': config.consider_preferences,
+                'fair_corro_rotation': config.fair_corro_rotation
+            })
+        )
+        
+        db.add(roster_period)
+        
+        # Generate shift assignments (simplified for demo)
+        members = db.query(Member).filter(Member.station == config.station).all()
+        total_days = (end_date - start_date).days
+        
+        shift_types = ['van', 'watchhouse', 'corro', 'early', 'late', 'night']
+        assignment_count = 0
+        
+        for day_offset in range(total_days):
+            current_date = start_date + timedelta(days=day_offset)
+            
+            # Create minimum required shifts per day
+            for van_slot in range(config.min_van_coverage):
+                member = members[assignment_count % len(members)] if members else None
+                if member:
+                    shift_assignment = ShiftAssignment(
+                        id=str(uuid.uuid4()),
+                        roster_period_id=roster_period.id,
+                        member_id=member.id,
+                        date=current_date,
+                        shift_type='van',
+                        start_time='06:00',
+                        end_time='14:00',
+                        assignment_priority='high' if config.enable_fatigue_balancing else 'normal'
+                    )
+                    db.add(shift_assignment)
+                    assignment_count += 1
+            
+            for watchhouse_slot in range(config.min_watchhouse_coverage):
+                member = members[assignment_count % len(members)] if members else None
+                if member:
+                    shift_assignment = ShiftAssignment(
+                        id=str(uuid.uuid4()),
+                        roster_period_id=roster_period.id,
+                        member_id=member.id,
+                        date=current_date,
+                        shift_type='watchhouse',
+                        start_time='14:00',
+                        end_time='22:00',
+                        assignment_priority='normal'
+                    )
+                    db.add(shift_assignment)
+                    assignment_count += 1
+        
+        db.commit()
+        db.refresh(roster_period)
+        
+        return {
+            "message": "Roster generated successfully",
+            "roster_period_id": roster_period.id,
+            "total_assignments": assignment_count,
+            "period_info": {
+                "start_date": roster_period.start_date.isoformat(),
+                "end_date": roster_period.end_date.isoformat(),
+                "station": roster_period.station,
+                "status": roster_period.status
+            }
+        }
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error generating roster: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate roster: {str(e)}")
+
+@api_router.get("/roster/{roster_id}")
+async def get_roster_details(roster_id: str, db=Depends(get_db)):
+    """Get detailed roster information including assignments"""
+    try:
+        roster_period = db.query(RosterPeriod).filter(RosterPeriod.id == roster_id).first()
+        if not roster_period:
+            raise HTTPException(status_code=404, detail="Roster not found")
+        
+        assignments = db.query(ShiftAssignment).filter(
+            ShiftAssignment.roster_period_id == roster_id
+        ).all()
+        
+        # Get member details for assignments
+        assignment_details = []
+        for assignment in assignments:
+            member = db.query(Member).filter(Member.id == assignment.member_id).first()
+            assignment_dict = model_to_dict(assignment)
+            if member:
+                assignment_dict['member_name'] = member.name
+                assignment_dict['member_rank'] = member.rank
+            assignment_details.append(assignment_dict)
+        
+        return {
+            "roster_period": model_to_dict(roster_period),
+            "assignments": assignment_details,
+            "total_assignments": len(assignments),
+            "summary": {
+                "van_shifts": len([a for a in assignments if a.shift_type == 'van']),
+                "watchhouse_shifts": len([a for a in assignments if a.shift_type == 'watchhouse']),
+                "corro_shifts": len([a for a in assignments if a.shift_type == 'corro']),
+                "night_shifts": len([a for a in assignments if a.shift_type == 'night'])
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching roster details: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch roster details")
+
+@api_router.put("/roster/{roster_id}/publish")
+async def publish_roster(roster_id: str, db=Depends(get_db)):
+    """Publish a draft roster"""
+    try:
+        roster_period = db.query(RosterPeriod).filter(RosterPeriod.id == roster_id).first()
+        if not roster_period:
+            raise HTTPException(status_code=404, detail="Roster not found")
+        
+        if roster_period.status == 'published':
+            raise HTTPException(status_code=400, detail="Roster is already published")
+        
+        # Check for EBA compliance violations before publishing
+        assignments = db.query(ShiftAssignment).filter(
+            ShiftAssignment.roster_period_id == roster_id
+        ).all()
+        
+        # Simple compliance check - ensure no member has more than 5 consecutive shifts
+        member_consecutive_days = {}
+        for assignment in sorted(assignments, key=lambda x: x.date):
+            member_id = assignment.member_id
+            if member_id not in member_consecutive_days:
+                member_consecutive_days[member_id] = []
+            member_consecutive_days[member_id].append(assignment.date)
+        
+        # Check for violations
+        violations = []
+        for member_id, dates in member_consecutive_days.items():
+            consecutive_count = 1
+            for i in range(1, len(dates)):
+                if (dates[i] - dates[i-1]).days == 1:
+                    consecutive_count += 1
+                    if consecutive_count > 5:
+                        member = db.query(Member).filter(Member.id == member_id).first()
+                        violations.append(f"{member.name if member else 'Unknown'} has {consecutive_count} consecutive shifts")
+                else:
+                    consecutive_count = 1
+        
+        if violations:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot publish roster due to EBA violations: {', '.join(violations[:3])}"
+            )
+        
+        # Update status to published
+        roster_period.status = 'published'
+        roster_period.published_at = datetime.utcnow()
+        
+        db.commit()
+        
+        return {
+            "message": "Roster published successfully",
+            "roster_id": roster_id,
+            "published_at": roster_period.published_at.isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error publishing roster: {e}")
+        raise HTTPException(status_code=500, detail="Failed to publish roster")
+
 # Add router to app
 app.include_router(api_router)
 
