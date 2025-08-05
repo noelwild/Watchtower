@@ -71,6 +71,9 @@ class Member(Base):
     station = Column(String)
     rank = Column(String, default="Constable")
     seniority_years = Column(Integer, default=0)
+    special_qualifications = Column(Text)  # JSON string of qualifications
+    ostt_qualification_date = Column(DateTime)  # OSTT qualification date
+    ada_driver_authority = Column(Boolean, default=False)  # ADA driver authority
     preferences_json = Column(Text)  # JSON string of preferences
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
