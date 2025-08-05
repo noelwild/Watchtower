@@ -103,7 +103,8 @@
 #====================================================================================================
 
 user_problem_statement: |
-  EBA Violations Detail [View Details] button does not work - FIXED
+  1. Roster Producer [Generate New Roster] opens popup but [Generate Roster] button does not work - FIXED
+  2. Create 2 buttons next to title in top left corner, "Roster Management" & "Welfare" and make them work - COMPLETED
 
 backend:
   - task: "New EBA Compliance API Endpoints"
