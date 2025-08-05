@@ -499,10 +499,15 @@ const AuthProvider = ({ children }) => {
 
   const login = async (vpNumber, password) => {
     try {
+      console.log('Login attempt:', { vpNumber, password: password.substring(0, 3) + '***' });
+      console.log('API URL:', `${API}/auth/login`);
+      
       const response = await axios.post(`${API}/auth/login`, {
         vp_number: vpNumber.toUpperCase(), // Make case-insensitive
         password: password
       });
+      
+      console.log('Login response:', response.data);
       
       const { access_token, user: userData } = response.data;
       
@@ -515,6 +520,8 @@ const AuthProvider = ({ children }) => {
       return true;
     } catch (error) {
       console.error('Login failed:', error);
+      console.error('Login error response:', error.response?.data);
+      console.error('Login error status:', error.response?.status);
       return false;
     }
   };
