@@ -664,6 +664,261 @@ async def get_workload_summary(current_user: dict = Depends(get_current_user)):
 
 # Continue with other analytics endpoints... (truncated for length)
 
+@api_router.get("/analytics/corro-distribution")
+async def get_corro_distribution(current_user: dict = Depends(get_current_user)):
+    async with AsyncSessionLocal() as session:
+        four_weeks_ago = datetime.utcnow() - timedelta(weeks=4)
+        
+        # Get all active members
+        members_result = await session.execute(select(Member).where(Member.active == True))
+        members = members_result.scalars().all()
+        
+        result = []
+        for member in members:
+            # Get corro shifts for this member
+            corro_result = await session.execute(
+                select(Shift).where(
+                    and_(
+                        Shift.member_id == member.id,
+                        Shift.shift_type == "corro",
+                        Shift.date >= four_weeks_ago
+                    )
+                ).order_by(Shift.date.desc())
+            )
+            corro_shifts = corro_result.scalars().all()
+            
+            last_corro = corro_shifts[0].date if corro_shifts else None
+            days_since_corro = None
+            if last_corro:
+                days_since_corro = (datetime.utcnow() - last_corro).days
+            
+            result.append({
+                "member_id": member.id,
+                "member_name": member.name,
+                "station": member.station,
+                "corro_count_4weeks": len(corro_shifts),
+                "last_corro_date": last_corro,
+                "days_since_corro": days_since_corro,
+                "overdue": days_since_corro is None or days_since_corro > 28
+            })
+        
+        return sorted(result, key=lambda x: x["days_since_corro"] or 999, reverse=True)
+
+@api_router.get("/analytics/eba-violations-detail")
+async def get_eba_violations_detail(current_user: dict = Depends(get_current_user)):
+    """Get detailed EBA violations breakdown"""
+    async with AsyncSessionLocal() as session:
+        members_result = await session.execute(select(Member).where(Member.active == True))
+        members = members_result.scalars().all()
+        
+        violations = []
+        for member in members:
+            compliance = await check_eba_compliance(member.id, session)
+            if compliance.compliance_status == "violation":
+                violations.append({
+                    "member_id": member.id,
+                    "member_name": member.name,
+                    "station": member.station,
+                    "rank": member.rank,
+                    "fortnight_hours": compliance.fortnight_hours,
+                    "violations": compliance.violations,
+                    "urgency": "🚨 URGENT" if compliance.fortnight_hours > 85 else "#1 priority" if compliance.fortnight_hours > 80 else "#2 priority"
+                })
+        
+        # Sort by urgency (highest hours first)
+        return sorted(violations, key=lambda x: x["fortnight_hours"], reverse=True)
+
+@api_router.get("/analytics/eba-warnings-detail")
+async def get_eba_warnings_detail(current_user: dict = Depends(get_current_user)):
+    """Get detailed EBA warnings breakdown"""
+    async with AsyncSessionLocal() as session:
+        members_result = await session.execute(select(Member).where(Member.active == True))
+        members = members_result.scalars().all()
+        
+        warnings = []
+        for member in members:
+            compliance = await check_eba_compliance(member.id, session)
+            if compliance.compliance_status == "warning":
+                warnings.append({
+                    "member_id": member.id,
+                    "member_name": member.name,
+                    "station": member.station,
+                    "rank": member.rank,
+                    "fortnight_hours": compliance.fortnight_hours,
+                    "warnings": compliance.warnings,
+                    "urgency": "🚨 URGENT" if compliance.fortnight_hours > 70 else "#1 priority" if compliance.fortnight_hours > 68 else "#2 priority"
+                })
+        
+        return sorted(warnings, key=lambda x: x["fortnight_hours"], reverse=True)
+
+@api_router.get("/analytics/eba-compliant-members")
+async def get_eba_compliant_members(current_user: dict = Depends(get_current_user)):
+    """Get members who are EBA compliant"""
+    async with AsyncSessionLocal() as session:
+        members_result = await session.execute(select(Member).where(Member.active == True))
+        members = members_result.scalars().all()
+        
+        compliant = []
+        for member in members:
+            compliance = await check_eba_compliance(member.id, session)
+            if compliance.compliance_status == "compliant":
+                compliant.append({
+                    "member_id": member.id,
+                    "member_name": member.name,
+                    "station": member.station,
+                    "rank": member.rank,
+                    "fortnight_hours": compliance.fortnight_hours
+                })
+        
+        return sorted(compliant, key=lambda x: x["member_name"])
+
+@api_router.get("/analytics/over-76-hours")
+async def get_over_76_hours(current_user: dict = Depends(get_current_user)):
+    """Get members over 76 hours"""
+    async with AsyncSessionLocal() as session:
+        members_result = await session.execute(select(Member).where(Member.active == True))
+        members = members_result.scalars().all()
+        
+        over_76 = []
+        for member in members:
+            compliance = await check_eba_compliance(member.id, session)
+            if compliance.fortnight_hours > 76:
+                over_76.append({
+                    "member_id": member.id,
+                    "member_name": member.name,
+                    "station": member.station,
+                    "rank": member.rank,
+                    "fortnight_hours": compliance.fortnight_hours,
+                    "urgency": "🚨 URGENT" if compliance.fortnight_hours > 85 else "#1 priority"
+                })
+        
+        return sorted(over_76, key=lambda x: x["fortnight_hours"], reverse=True)
+
+@api_router.get("/analytics/approaching-76-hours")
+async def get_approaching_76_hours(current_user: dict = Depends(get_current_user)):
+    """Get members approaching 76 hours (65-76h range)"""
+    async with AsyncSessionLocal() as session:
+        members_result = await session.execute(select(Member).where(Member.active == True))
+        members = members_result.scalars().all()
+        
+        approaching = []
+        for member in members:
+            compliance = await check_eba_compliance(member.id, session)
+            if 65 <= compliance.fortnight_hours <= 76:
+                approaching.append({
+                    "member_id": member.id,
+                    "member_name": member.name,
+                    "station": member.station,
+                    "rank": member.rank,
+                    "fortnight_hours": compliance.fortnight_hours,
+                    "urgency": "#1 priority" if compliance.fortnight_hours > 72 else "#2 priority"
+                })
+        
+        return sorted(approaching, key=lambda x: x["fortnight_hours"], reverse=True)
+
+@api_router.get("/members/{member_id}/detailed-view")
+async def get_detailed_member_view(member_id: str, current_user: dict = Depends(get_current_user)):
+    """Get comprehensive detailed view for a member"""
+    async with AsyncSessionLocal() as session:
+        # Get member
+        member_result = await session.execute(select(Member).where(Member.id == member_id))
+        member = member_result.scalar_one_or_none()
+        
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # Get member's shifts (last 12 weeks for comprehensive view)
+        twelve_weeks_ago = datetime.utcnow() - timedelta(weeks=12)
+        shifts_result = await session.execute(
+            select(Shift).where(
+                and_(
+                    Shift.member_id == member_id,
+                    Shift.date >= twelve_weeks_ago
+                )
+            ).order_by(Shift.date.desc())
+        )
+        shifts = shifts_result.scalars().all()
+        
+        # Get EBA compliance
+        compliance = await check_eba_compliance(member_id, session)
+        
+        # Parse preferences
+        preferences = {}
+        if member.preferences_json:
+            try:
+                preferences = json.loads(member.preferences_json)
+            except:
+                preferences = MemberPreferences().dict()
+        
+        # Calculate shift breakdown (weekly hours for last 12 weeks)
+        shift_breakdown = []
+        for week in range(12):
+            week_start = datetime.utcnow() - timedelta(weeks=week+1)
+            week_end = week_start + timedelta(days=7)
+            
+            week_shifts = [s for s in shifts if week_start <= s.date < week_end]
+            total_hours = sum(calculate_shift_hours(model_to_dict(s)) for s in week_shifts)
+            
+            shift_breakdown.append({
+                "week": f"Week {12-week}",
+                "start_date": week_start.strftime('%Y-%m-%d'),
+                "total_hours": total_hours,
+                "shift_count": len(week_shifts),
+                "shift_types": list(set(s.shift_type for s in week_shifts))
+            })
+        
+        return {
+            "member_info": {
+                "id": member.id,
+                "name": member.name,
+                "vp_number": member.vp_number,
+                "rank": member.rank,
+                "station": member.station,
+                "seniority_years": member.seniority_years,
+                "email": member.email
+            },
+            "shift_breakdown": shift_breakdown,
+            "eba_compliance_history": {
+                "current_status": compliance.compliance_status,
+                "fortnight_hours": compliance.fortnight_hours,
+                "violations_count": len(compliance.violations),
+                "warnings_count": len(compliance.warnings),
+                "violations": compliance.violations,
+                "warnings": compliance.warnings,
+                "compliance_trend": "improving"  # Could be calculated from historical data
+            },
+            "member_preferences": preferences,
+            "activity_log": [
+                {
+                    "date": shift.date.strftime('%Y-%m-%d'),
+                    "action": f"Worked {shift.shift_type} shift",
+                    "hours": calculate_shift_hours(model_to_dict(shift)),
+                    "overtime": shift.overtime_hours > 0
+                }
+                for shift in shifts[:20]  # Last 20 activities
+            ],
+            "fatigue_risk_projection": {
+                "current_risk_level": "high" if compliance.fortnight_hours > 70 else "medium" if compliance.fortnight_hours > 50 else "low",
+                "risk_factors": [
+                    f"Current fortnight hours: {compliance.fortnight_hours:.1f}h",
+                    f"Recent overtime: {sum(s.overtime_hours for s in shifts[:14]):.1f}h",
+                    f"Night shifts this month: {len([s for s in shifts if s.shift_type == 'night' and s.date >= datetime.utcnow() - timedelta(days=30)])}"
+                ],
+                "recommendations": [
+                    "Monitor weekly hours closely",
+                    "Ensure adequate rest periods",
+                    "Consider reducing overtime assignments"
+                ]
+            },
+            "schedule_request_history": [],  # Placeholder for leave requests
+            "equity_tracking": {
+                "corro_assignments_3months": len([s for s in shifts if s.shift_type == "corro" and s.date >= datetime.utcnow() - timedelta(days=90)]),
+                "overtime_hours_3months": sum(s.overtime_hours for s in shifts if s.date >= datetime.utcnow() - timedelta(days=90)),
+                "fairness_score": min(100, max(0, 100 - abs(compliance.fortnight_hours - 50))),  # Simple fairness calculation
+                "weekend_assignments": len([s for s in shifts if s.date.weekday() >= 5])
+            }
+        }
+
 # Add router to app
 app.include_router(api_router)
 
