@@ -642,7 +642,16 @@ const Login = () => {
                 />
               </div>
               {error && (
-                <div className="text-red-400 text-sm text-center">{error}</div>
+                <div className="text-red-300 text-sm text-center bg-red-900/20 p-3 rounded border border-red-700/30">
+                  {error}
+                  <div className="mt-2 text-xs opacity-80">
+                    💡 <strong>Troubleshooting:</strong>
+                    <br />• Try the green "TEST LOGIN" button below
+                    <br />• Press F12 → Console to see detailed logs
+                    <br />• Ensure VP number is uppercase (VP12345)
+                    <br />• Check for extra spaces in password field
+                  </div>
+                </div>
               )}
               <Button 
                 type="submit" 
