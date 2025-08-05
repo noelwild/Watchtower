@@ -257,7 +257,16 @@ const CategoryDetailModal = ({ category, isOpen, onClose, onViewDetails }) => {
                           <Button 
                             size="sm" 
                             className="bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={() => onViewDetails(item)}
+                            onClick={() => {
+                              // Transform the item data to match the expected member structure
+                              const memberData = {
+                                id: item.member_id || item.id,
+                                name: item.member_name || item.name,
+                                station: item.station,
+                                rank: item.rank
+                              };
+                              onViewDetails(memberData);
+                            }}
                           >
                             <Eye className="w-3 h-3 mr-1" />
                             View Details
