@@ -2951,6 +2951,197 @@ const RosterProducer = ({ user }) => {
   );
 };
 
+// Welfare Management Component
+const WelfareManagement = ({ user, members }) => {
+  const [welfareData, setWelfareData] = useState([]);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [welfareNotes, setWelfareNotes] = useState('');
+
+  const fetchWelfareData = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/welfare/overview?station=${user?.station}`);
+      setWelfareData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch welfare data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addWelfareNote = async () => {
+    if (!selectedMember || !welfareNotes.trim()) return;
+    
+    try {
+      await axios.post(`${API}/welfare/notes`, {
+        member_id: selectedMember.id,
+        note: welfareNotes.trim(),
+        created_by: user.id
+      });
+      
+      setWelfareNotes('');
+      setSelectedMember(null);
+      await fetchWelfareData();
+    } catch (error) {
+      console.error('Failed to add welfare note:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchWelfareData();
+  }, [user?.station]);
+
+  const getWelfareRiskLevel = (member) => {
+    const riskFactors = [
+      member.consecutive_shifts > 6,
+      member.overtime_hours_month > 40,
+      member.welfare_flags?.length > 0,
+      member.fatigue_score > 70
+    ].filter(Boolean).length;
+
+    if (riskFactors >= 3) return { level: 'high', color: 'bg-red-100 border-red-300', badge: 'bg-red-600' };
+    if (riskFactors >= 2) return { level: 'medium', color: 'bg-orange-100 border-orange-300', badge: 'bg-orange-500' };
+    return { level: 'low', color: 'bg-green-100 border-green-300', badge: 'bg-green-600' };
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-red-600">{welfareData.filter(m => getWelfareRiskLevel(m).level === 'high').length}</div>
+            <div className="text-sm text-slate-600">High Risk</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-orange-600">{welfareData.filter(m => getWelfareRiskLevel(m).level === 'medium').length}</div>
+            <div className="text-sm text-slate-600">Medium Risk</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">{welfareData.filter(m => getWelfareRiskLevel(m).level === 'low').length}</div>
+            <div className="text-sm text-slate-600">Low Risk</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">{welfareData.length}</div>
+            <div className="text-sm text-slate-600">Total Members</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Member Welfare List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Member Welfare Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {members?.slice(0, 10)?.map((member) => {
+                const riskLevel = getWelfareRiskLevel(member);
+                return (
+                  <div 
+                    key={member.id} 
+                    className={`p-4 rounded-lg border-2 ${riskLevel.color} transition-colors`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div>
+                          <div className="font-medium">{member.name}</div>
+                          <div className="text-sm text-slate-600 capitalize">
+                            {member.rank} • {member.station}
+                          </div>
+                        </div>
+                        <Badge className={riskLevel.badge}>
+                          {riskLevel.level.toUpperCase()} RISK
+                        </Badge>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="text-right text-sm">
+                          <div>Fatigue Score: <span className="font-medium">{member.fatigue_score || 45}</span></div>
+                          <div>Overtime: <span className="font-medium">{member.overtime_hours_month || 12}h</span></div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => setSelectedMember(member)}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          Add Note
+                        </Button>
+                      </div>
+                    </div>
+                    {member.welfare_notes && (
+                      <div className="mt-3 p-3 bg-white/70 rounded border border-slate-200">
+                        <div className="text-sm text-slate-700">{member.welfare_notes}</div>
+                        <div className="text-xs text-slate-500 mt-1">Last updated: 2 days ago</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }) || (
+                <div className="text-center py-8 text-slate-500">
+                  <Heart className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No welfare data available</p>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Welfare Note Modal */}
+      {selectedMember && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-0 w-full max-w-md">
+            <div className="px-6 py-4 border-b">
+              <h4 className="font-semibold">Add Welfare Note</h4>
+              <p className="text-sm text-slate-600">For {selectedMember.name}</p>
+            </div>
+            
+            <div className="p-6">
+              <Textarea
+                value={welfareNotes}
+                onChange={(e) => setWelfareNotes(e.target.value)}
+                placeholder="Enter welfare note or concern..."
+                className="min-h-[120px] resize-none"
+              />
+            </div>
+            
+            <div className="px-6 py-4 border-t flex justify-end space-x-3">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setSelectedMember(null);
+                  setWelfareNotes('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={addWelfareNote}
+                disabled={!welfareNotes.trim()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Add Note
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
