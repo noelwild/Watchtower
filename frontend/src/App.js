@@ -56,9 +56,10 @@ import {
   Heart
 } from 'lucide-react';
 
-// Configuration - Updated to read from text file approach
-const BACKEND_URL = 'http://localhost:8001';
-const API = `${BACKEND_URL}/api`;
+// Configuration - Fixed for Kubernetes environment
+// In Kubernetes, we need to use relative URLs for API calls
+const BACKEND_URL = ''; // Use relative URL
+const API = `/api`;
 
 // Authentication context
 const AuthContext = React.createContext();
