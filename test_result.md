@@ -103,12 +103,7 @@
 #====================================================================================================
 
 user_problem_statement: |
-  User requested comprehensive "Detailed Member View" implementation and UI/UX refinements:
-  1. Modal button inconsistencies - ensure single "X" or "Cancel" button per modal
-  2. EBA compliance dashboard boxes should be clickable with integrated detailed information
-  3. Corro distribution and welfare indicators should be ordered by urgency  
-  4. Member Profile edit window cancel button must be functional
-  5. Implement detailed member view with: Shift Breakdown, EBA Compliance History, Member Preferences, Activity Log, Fatigue Risk Projection, Schedule & Request History, Equity Tracking
+  EBA Violations Detail [View Details] button does not work - FIXED
 
 backend:
   - task: "New EBA Compliance API Endpoints"
