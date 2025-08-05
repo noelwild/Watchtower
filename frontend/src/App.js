@@ -660,13 +660,15 @@ const Login = () => {
                 onClick={async () => {
                   setLoading(true);
                   setError('');
-                  console.log('Test login clicked - attempting login with VP12345/password123');
+                  console.log('🧪 TEST LOGIN: Starting with hardcoded VP12345/password123');
                   const success = await login('VP12345', 'password123');
-                  console.log('Test login result:', success);
+                  console.log('🧪 TEST LOGIN: Result =', success);
                   if (success) {
+                    console.log('🧪 TEST LOGIN: Navigation to dashboard');
                     navigate('/');
                   } else {
-                    setError('Test login failed - check console for details');
+                    console.log('🧪 TEST LOGIN: Failed - check console logs above');
+                    setError('Test login failed - check browser console (F12) for details');
                   }
                   setLoading(false);
                 }}
@@ -674,6 +676,34 @@ const Login = () => {
                 disabled={loading}
               >
                 🧪 TEST LOGIN (VP12345) - Remove Later
+              </Button>
+              
+              {/* DEBUG LOGIN BUTTON */}
+              <Button 
+                type="button"
+                onClick={async () => {
+                  console.log('🔧 DEBUG: Checking current browser state');
+                  console.log('🔧 DEBUG: localStorage token =', localStorage.getItem('token'));
+                  console.log('🔧 DEBUG: localStorage user =', localStorage.getItem('user'));
+                  console.log('🔧 DEBUG: API URL =', `${BACKEND_URL}/api/auth/login`);
+                  console.log('🔧 DEBUG: Current URL =', window.location.href);
+                  
+                  // Test direct API call
+                  try {
+                    const testResponse = await fetch(`${BACKEND_URL}/api/auth/login`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ vp_number: 'VP12345', password: 'password123' })
+                    });
+                    const testData = await testResponse.json();
+                    console.log('🔧 DEBUG: Direct fetch test =', testResponse.status, testData);
+                  } catch (e) {
+                    console.log('🔧 DEBUG: Direct fetch failed =', e.message);
+                  }
+                }}
+                className="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-xs"
+              >
+                🔧 DEBUG INFO (Check Console F12)
               </Button>
             </div>
             
