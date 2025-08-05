@@ -254,7 +254,11 @@ const CategoryDetailModal = ({ category, isOpen, onClose, onViewDetails }) => {
 
                         {/* Action Buttons */}
                         <div className="mt-6 flex space-x-2">
-                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                          <Button 
+                            size="sm" 
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={() => onViewDetails(item)}
+                          >
                             <Eye className="w-3 h-3 mr-1" />
                             View Details
                           </Button>
