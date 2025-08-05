@@ -56,10 +56,10 @@ import {
   Heart
 } from 'lucide-react';
 
-// Configuration - Use full URL for Kubernetes environment
-// Check if we're running in browser and use appropriate backend URL
-const BACKEND_URL = window.location.protocol + '//' + window.location.hostname + ':8001';
-const API = `${BACKEND_URL}/api`;
+// Configuration - Use relative URLs for Kubernetes ingress routing
+// Kubernetes automatically routes /api requests to backend port 8001
+const BACKEND_URL = ''; // Use same origin
+const API = `/api`;
 
 // Authentication context
 const AuthContext = React.createContext();
