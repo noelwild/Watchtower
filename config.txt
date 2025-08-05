@@ -1,0 +1,14 @@
+# WATCHTOWER Application Configuration
+# Database Configuration
+DB_PATH=watchtower.db
+DB_NAME=watchtower_db
+
+# Backend Configuration  
+BACKEND_URL=http://localhost:8001
+JWT_SECRET=watchtower_secret_key_2025
+
+# Demo Credentials (for testing)
+# Format: VP_NUMBER:PASSWORD:NAME:EMAIL:ROLE:STATION:RANK:SENIORITY
+DEMO_USER_1=VP12345:password123:Sarah Connor:sarah.connor@vicpol.gov.au:inspector:geelong:Inspector:15
+DEMO_USER_2=VP12346:password123:John Smith:john.smith@vicpol.gov.au:sergeant:geelong:Sergeant:8
+DEMO_USER_3=VP12347:password123:Mike Johnson:mike.johnson@vicpol.gov.au:general_duties:corio:Constable:3
