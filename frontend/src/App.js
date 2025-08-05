@@ -763,19 +763,41 @@ const Login = () => {
 };
 
 // Header Component
-const Header = () => {
+const Header = ({ onRosterManagement, onWelfare }) => {
   const { user, logout } = useAuth();
 
   return (
     <header className="bg-slate-900 border-b border-slate-700 px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-6">
           <div className="flex items-center space-x-2">
             <Shield className="w-8 h-8 text-blue-400" />
             <div>
               <h1 className="text-xl font-bold text-white">WATCHTOWER</h1>
               <p className="text-xs text-slate-400">Fatigue & Fairness Module</p>
             </div>
+          </div>
+          
+          {/* New Header Buttons */}
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRosterManagement}
+              className="text-slate-300 hover:text-white hover:bg-slate-800 px-3 py-2"
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Roster Management
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onWelfare}
+              className="text-slate-300 hover:text-white hover:bg-slate-800 px-3 py-2"
+            >
+              <Heart className="w-4 h-4 mr-2" />
+              Welfare
+            </Button>
           </div>
         </div>
         
