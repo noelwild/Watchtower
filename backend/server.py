@@ -1002,7 +1002,7 @@ async def generate_roster(config: RosterGenerationConfig, session=Depends(get_db
                         shift_type='watchhouse',
                         start_time='14:00',
                         end_time='22:00',
-                        assignment_priority='normal'
+                        assignment_reason='auto_generated'
                     )
                     session.add(shift_assignment)
                     assignment_count += 1
