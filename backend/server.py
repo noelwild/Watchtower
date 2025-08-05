@@ -1050,7 +1050,7 @@ async def generate_roster(config: RosterGenerationConfig, session=Depends(get_db
 
 @api_router.get("/roster/{roster_id}")
 async def get_roster_details(roster_id: str, session=Depends(get_db)):
-    """Get detailed roster information including assignments"""
+    """Get detailed roster information with 14-day member spread"""
     try:
         # Get roster period
         roster_result = await session.execute(select(RosterPeriod).where(RosterPeriod.id == roster_id))
@@ -1064,26 +1064,118 @@ async def get_roster_details(roster_id: str, session=Depends(get_db)):
         )
         assignments = assignments_result.scalars().all()
         
-        # Get member details for assignments
+        # Get all unique member IDs
+        member_ids = list(set(assignment.member_id for assignment in assignments))
+        
+        # Get comprehensive member details
+        members_result = await session.execute(
+            select(Member).where(Member.id.in_(member_ids))
+        )
+        members = members_result.scalars().all()
+        member_dict = {member.id: member for member in members}
+        
+        # Create 14-day spread
+        start_date = roster_period.start_date
+        end_date = min(start_date + timedelta(days=14), roster_period.end_date)
+        
+        # Generate date range for 14 days
+        date_range = []
+        current_date = start_date
+        while current_date <= end_date and len(date_range) < 14:
+            date_range.append(current_date)
+            current_date += timedelta(days=1)
+        
+        # Organize assignments by member and date
+        member_schedules = {}
+        for assignment in assignments:
+            member_id = assignment.member_id
+            assignment_date = assignment.date.date() if isinstance(assignment.date, datetime) else assignment.date
+            
+            if member_id not in member_schedules:
+                member_schedules[member_id] = {}
+            
+            if assignment_date not in member_schedules[member_id]:
+                member_schedules[member_id][assignment_date] = []
+            
+            member_schedules[member_id][assignment_date].append({
+                'shift_type': assignment.shift_type,
+                'start_time': assignment.start_time,
+                'end_time': assignment.end_time,
+                'hours': assignment.hours
+            })
+        
+        # Build member summary with 14-day spread
+        member_summaries = []
+        for member_id, member in member_dict.items():
+            # Parse special qualifications
+            special_qualifications = []
+            if member.special_qualifications:
+                try:
+                    special_qualifications = json.loads(member.special_qualifications)
+                except:
+                    special_qualifications = [member.special_qualifications] if member.special_qualifications else []
+            
+            # Build 14-day schedule
+            daily_schedule = []
+            for date in date_range:
+                day_assignments = member_schedules.get(member_id, {}).get(date, [])
+                day_info = {
+                    'date': date.isoformat(),
+                    'day_name': date.strftime('%A'),
+                    'assignments': day_assignments,
+                    'total_hours': sum(shift.get('hours', 8.0) for shift in day_assignments),
+                    'shift_count': len(day_assignments)
+                }
+                daily_schedule.append(day_info)
+            
+            # Calculate totals for this member
+            total_shifts = sum(day['shift_count'] for day in daily_schedule)
+            total_hours = sum(day['total_hours'] for day in daily_schedule)
+            
+            member_summary = {
+                'member_id': member_id,
+                'name': member.name,
+                'vp_number': member.vp_number,
+                'rank': member.rank,
+                'special_qualifications': special_qualifications,
+                'ostt_qualification_date': member.ostt_qualification_date.isoformat() if member.ostt_qualification_date else None,
+                'ada_driver_authority': member.ada_driver_authority,
+                'station': member.station,
+                'seniority_years': member.seniority_years,
+                'daily_schedule': daily_schedule,
+                'total_shifts': total_shifts,
+                'total_hours': total_hours
+            }
+            member_summaries.append(member_summary)
+        
+        # Sort members by rank hierarchy and name
+        rank_order = {'Inspector': 1, 'Sergeant': 2, 'Senior Constable': 3, 'Constable': 4}
+        member_summaries.sort(key=lambda x: (rank_order.get(x['rank'], 5), x['name']))
+        
+        # Create assignment details for backward compatibility
         assignment_details = []
         for assignment in assignments:
-            member_result = await session.execute(select(Member).where(Member.id == assignment.member_id))
-            member = member_result.scalar_one_or_none()
+            member = member_dict.get(assignment.member_id)
             assignment_dict = model_to_dict(assignment)
             if member:
                 assignment_dict['member_name'] = member.name
                 assignment_dict['member_rank'] = member.rank
+                assignment_dict['member_vp_number'] = member.vp_number
             assignment_details.append(assignment_dict)
         
         return {
             "roster_period": model_to_dict(roster_period),
             "assignments": assignment_details,
             "total_assignments": len(assignments),
+            "member_summaries": member_summaries,
+            "date_range": [date.isoformat() for date in date_range],
             "summary": {
                 "van_shifts": len([a for a in assignments if a.shift_type == 'van']),
                 "watchhouse_shifts": len([a for a in assignments if a.shift_type == 'watchhouse']),
                 "corro_shifts": len([a for a in assignments if a.shift_type == 'corro']),
-                "night_shifts": len([a for a in assignments if a.shift_type == 'night'])
+                "night_shifts": len([a for a in assignments if a.shift_type == 'night']),
+                "total_members": len(member_summaries),
+                "total_hours": sum(ms['total_hours'] for ms in member_summaries)
             }
         }
         
