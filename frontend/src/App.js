@@ -1831,6 +1831,7 @@ const Dashboard = () => {
           category={categoryModal.category}
           isOpen={categoryModal.isOpen}
           onClose={closeCategoryModal}
+          onViewDetails={openDetailedMemberView}
         />
 
         {/* Detailed Member View Modal */}
