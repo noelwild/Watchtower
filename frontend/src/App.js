@@ -674,45 +674,57 @@ const Login = () => {
                   console.log('🧪 TEST LOGIN: Result =', success);
                   if (success) {
                     console.log('🧪 TEST LOGIN: Navigation to dashboard');
+                    alert('✅ LOGIN SUCCESSFUL! You are now logged in as Sarah Connor (Inspector). The dashboard will load.');
                     navigate('/');
                   } else {
                     console.log('🧪 TEST LOGIN: Failed - check console logs above');
                     setError('Test login failed - check browser console (F12) for details');
+                    alert('❌ LOGIN FAILED! Check the console for error details.');
                   }
                   setLoading(false);
                 }}
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
                 disabled={loading}
               >
-                🧪 TEST LOGIN (VP12345) - Remove Later
+                🧪 TEST LOGIN (VP12345) - INSTANT ACCESS
               </Button>
               
-              {/* DEBUG LOGIN BUTTON */}
+              {/* MANUAL TEST */}
               <Button 
                 type="button"
                 onClick={async () => {
-                  console.log('🔧 DEBUG: Checking current browser state');
-                  console.log('🔧 DEBUG: localStorage token =', localStorage.getItem('token'));
-                  console.log('🔧 DEBUG: localStorage user =', localStorage.getItem('user'));
-                  console.log('🔧 DEBUG: API URL =', `${BACKEND_URL}/api/auth/login`);
-                  console.log('🔧 DEBUG: Current URL =', window.location.href);
+                  setLoading(true);
+                  setError('');
                   
-                  // Test direct API call
-                  try {
-                    const testResponse = await fetch(`${BACKEND_URL}/api/auth/login`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ vp_number: 'VP12345', password: 'password123' })
-                    });
-                    const testData = await testResponse.json();
-                    console.log('🔧 DEBUG: Direct fetch test =', testResponse.status, testData);
-                  } catch (e) {
-                    console.log('🔧 DEBUG: Direct fetch failed =', e.message);
+                  const vpInput = document.querySelector('input[placeholder="VP12345"]');
+                  const passInput = document.querySelector('input[placeholder="Enter password"]');
+                  
+                  const vpValue = vpInput?.value?.trim();
+                  const passValue = passInput?.value?.trim();
+                  
+                  console.log('🔧 MANUAL TEST: VP =', vpValue, 'Password =', passValue?.substring(0, 3) + '***');
+                  
+                  if (!vpValue || !passValue) {
+                    alert('❌ Please fill in both VP Number and Password fields first!');
+                    setLoading(false);
+                    return;
                   }
+                  
+                  const success = await login(vpValue, passValue);
+                  
+                  if (success) {
+                    alert('✅ MANUAL LOGIN SUCCESSFUL! Dashboard will load now.');
+                    navigate('/');
+                  } else {
+                    alert('❌ MANUAL LOGIN FAILED! Check credentials and try again.');
+                    setError('Manual login failed with your entered credentials');
+                  }
+                  setLoading(false);
                 }}
-                className="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-xs"
+                className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs"
+                disabled={loading}
               >
-                🔧 DEBUG INFO (Check Console F12)
+                🔧 TEST YOUR MANUAL INPUT
               </Button>
             </div>
             
