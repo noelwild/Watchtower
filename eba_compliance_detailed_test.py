@@ -10,7 +10,7 @@ from datetime import datetime
 
 class EBAComplianceDetailedTester:
     def __init__(self):
-        self.base_url = "https://d10b92a2-8b37-41ef-8865-be6746ac4c76.preview.emergentagent.com"
+        self.base_url = "https://59b2d733-4787-4176-aa19-7dfe72fa5bb9.preview.emergentagent.com"
         self.api_url = f"{self.base_url}/api"
         self.token = None
         
