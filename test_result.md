@@ -263,8 +263,34 @@ metadata:
   test_sequence: 0
   run_ui: false
 
+  - task: "Roster Producer Generate Roster Button Fix"
+    implemented: true
+    working: "NA"
+    file: "App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "User reported that the Generate Roster button in Roster Producer was previously non-functional. Need to test the fix to ensure the button works properly, shows loading state, and successfully generates rosters."
+
+  - task: "New Header Buttons - Roster Management and Welfare"
+    implemented: true
+    working: "NA"
+    file: "App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "User requested testing of two new header buttons: 'Roster Management' (Calendar icon) and 'Welfare' (Heart icon). Both should open modals with their respective content and be closable via X button."
+
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Roster Producer Generate Roster Button Fix"
+    - "New Header Buttons - Roster Management and Welfare"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
