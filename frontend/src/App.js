@@ -87,7 +87,7 @@ const formatDateTime = (date) => {
 };
 
 // Enhanced Category Detail Modal Component - Single Static Window
-const CategoryDetailModal = ({ category, isOpen, onClose }) => {
+const CategoryDetailModal = ({ category, isOpen, onClose, onViewDetails }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
