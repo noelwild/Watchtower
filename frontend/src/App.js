@@ -502,26 +502,42 @@ const AuthProvider = ({ children }) => {
       console.log('Login attempt:', { vpNumber, password: password.substring(0, 3) + '***' });
       console.log('API URL:', `${API}/auth/login`);
       
-      const response = await axios.post(`${API}/auth/login`, {
-        vp_number: vpNumber.toUpperCase(), // Make case-insensitive
+      const requestData = {
+        vp_number: vpNumber.toUpperCase(),
         password: password
-      });
+      };
       
-      console.log('Login response:', response.data);
+      console.log('Request data:', requestData);
       
-      const { access_token, user: userData } = response.data;
+      const response = await axios.post(`${API}/auth/login`, requestData);
       
-      setToken(access_token);
-      setUser(userData);
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      console.log('Full response:', response);
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
       
-      return true;
+      // Check if response is successful
+      if (response.status === 200 && response.data && response.data.access_token) {
+        const { access_token, user: userData } = response.data;
+        
+        console.log('Login successful, setting user data:', userData);
+        
+        setToken(access_token);
+        setUser(userData);
+        localStorage.setItem('token', access_token);
+        localStorage.setItem('user', JSON.stringify(userData));
+        axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+        
+        return true;
+      } else {
+        console.error('Unexpected response format:', response);
+        return false;
+      }
     } catch (error) {
       console.error('Login failed:', error);
       console.error('Login error response:', error.response?.data);
       console.error('Login error status:', error.response?.status);
+      console.error('Login error headers:', error.response?.headers);
+      console.error('Login error config:', error.config);
       return false;
     }
   };
