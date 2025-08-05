@@ -931,12 +931,13 @@ class RosterGenerationConfig(BaseModel):
     fair_corro_rotation: bool = True
 
 @api_router.get("/roster/periods")
-async def get_roster_periods(station: str, db=Depends(get_db)):
+async def get_roster_periods(station: str, session=Depends(get_db)):
     """Get all roster periods for a station"""
     try:
-        roster_periods = db.query(RosterPeriod).filter(
-            RosterPeriod.station == station
-        ).order_by(RosterPeriod.start_date.desc()).all()
+        result = await session.execute(
+            select(RosterPeriod).where(RosterPeriod.station == station).order_by(RosterPeriod.start_date.desc())
+        )
+        roster_periods = result.scalars().all()
         
         return [model_to_dict(period) for period in roster_periods]
     except Exception as e:
@@ -944,7 +945,7 @@ async def get_roster_periods(station: str, db=Depends(get_db)):
         raise HTTPException(status_code=500, detail="Failed to fetch roster periods")
 
 @api_router.post("/roster/generate")
-async def generate_roster(config: RosterGenerationConfig, db=Depends(get_db)):
+async def generate_roster(config: RosterGenerationConfig, session=Depends(get_db)):
     """Generate a new roster based on configuration"""
     try:
         # Create a new roster period
@@ -967,10 +968,11 @@ async def generate_roster(config: RosterGenerationConfig, db=Depends(get_db)):
             })
         )
         
-        db.add(roster_period)
+        session.add(roster_period)
         
         # Generate shift assignments (simplified for demo)
-        members = db.query(Member).filter(Member.station == config.station).all()
+        members_result = await session.execute(select(Member).where(Member.station == config.station))
+        members = members_result.scalars().all()
         total_days = (end_date - start_date).days
         
         shift_types = ['van', 'watchhouse', 'corro', 'early', 'late', 'night']
@@ -993,7 +995,7 @@ async def generate_roster(config: RosterGenerationConfig, db=Depends(get_db)):
                         end_time='14:00',
                         assignment_priority='high' if config.enable_fatigue_balancing else 'normal'
                     )
-                    db.add(shift_assignment)
+                    session.add(shift_assignment)
                     assignment_count += 1
             
             for watchhouse_slot in range(config.min_watchhouse_coverage):
@@ -1009,11 +1011,11 @@ async def generate_roster(config: RosterGenerationConfig, db=Depends(get_db)):
                         end_time='22:00',
                         assignment_priority='normal'
                     )
-                    db.add(shift_assignment)
+                    session.add(shift_assignment)
                     assignment_count += 1
         
-        db.commit()
-        db.refresh(roster_period)
+        await session.commit()
+        await session.refresh(roster_period)
         
         return {
             "message": "Roster generated successfully",
@@ -1028,26 +1030,31 @@ async def generate_roster(config: RosterGenerationConfig, db=Depends(get_db)):
         }
         
     except Exception as e:
-        db.rollback()
+        await session.rollback()
         logger.error(f"Error generating roster: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate roster: {str(e)}")
 
 @api_router.get("/roster/{roster_id}")
-async def get_roster_details(roster_id: str, db=Depends(get_db)):
+async def get_roster_details(roster_id: str, session=Depends(get_db)):
     """Get detailed roster information including assignments"""
     try:
-        roster_period = db.query(RosterPeriod).filter(RosterPeriod.id == roster_id).first()
+        # Get roster period
+        roster_result = await session.execute(select(RosterPeriod).where(RosterPeriod.id == roster_id))
+        roster_period = roster_result.scalar_one_or_none()
         if not roster_period:
             raise HTTPException(status_code=404, detail="Roster not found")
         
-        assignments = db.query(ShiftAssignment).filter(
-            ShiftAssignment.roster_period_id == roster_id
-        ).all()
+        # Get assignments
+        assignments_result = await session.execute(
+            select(ShiftAssignment).where(ShiftAssignment.roster_period_id == roster_id)
+        )
+        assignments = assignments_result.scalars().all()
         
         # Get member details for assignments
         assignment_details = []
         for assignment in assignments:
-            member = db.query(Member).filter(Member.id == assignment.member_id).first()
+            member_result = await session.execute(select(Member).where(Member.id == assignment.member_id))
+            member = member_result.scalar_one_or_none()
             assignment_dict = model_to_dict(assignment)
             if member:
                 assignment_dict['member_name'] = member.name
@@ -1073,10 +1080,12 @@ async def get_roster_details(roster_id: str, db=Depends(get_db)):
         raise HTTPException(status_code=500, detail="Failed to fetch roster details")
 
 @api_router.put("/roster/{roster_id}/publish")
-async def publish_roster(roster_id: str, db=Depends(get_db)):
+async def publish_roster(roster_id: str, session=Depends(get_db)):
     """Publish a draft roster"""
     try:
-        roster_period = db.query(RosterPeriod).filter(RosterPeriod.id == roster_id).first()
+        # Get roster period
+        roster_result = await session.execute(select(RosterPeriod).where(RosterPeriod.id == roster_id))
+        roster_period = roster_result.scalar_one_or_none()
         if not roster_period:
             raise HTTPException(status_code=404, detail="Roster not found")
         
@@ -1084,9 +1093,10 @@ async def publish_roster(roster_id: str, db=Depends(get_db)):
             raise HTTPException(status_code=400, detail="Roster is already published")
         
         # Check for EBA compliance violations before publishing
-        assignments = db.query(ShiftAssignment).filter(
-            ShiftAssignment.roster_period_id == roster_id
-        ).all()
+        assignments_result = await session.execute(
+            select(ShiftAssignment).where(ShiftAssignment.roster_period_id == roster_id)
+        )
+        assignments = assignments_result.scalars().all()
         
         # Simple compliance check - ensure no member has more than 5 consecutive shifts
         member_consecutive_days = {}
@@ -1104,7 +1114,8 @@ async def publish_roster(roster_id: str, db=Depends(get_db)):
                 if (dates[i] - dates[i-1]).days == 1:
                     consecutive_count += 1
                     if consecutive_count > 5:
-                        member = db.query(Member).filter(Member.id == member_id).first()
+                        member_result = await session.execute(select(Member).where(Member.id == member_id))
+                        member = member_result.scalar_one_or_none()
                         violations.append(f"{member.name if member else 'Unknown'} has {consecutive_count} consecutive shifts")
                 else:
                     consecutive_count = 1
@@ -1119,7 +1130,7 @@ async def publish_roster(roster_id: str, db=Depends(get_db)):
         roster_period.status = 'published'
         roster_period.published_at = datetime.utcnow()
         
-        db.commit()
+        await session.commit()
         
         return {
             "message": "Roster published successfully",
@@ -1130,7 +1141,7 @@ async def publish_roster(roster_id: str, db=Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await session.rollback()
         logger.error(f"Error publishing roster: {e}")
         raise HTTPException(status_code=500, detail="Failed to publish roster")
 
