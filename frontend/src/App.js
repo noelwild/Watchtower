@@ -2929,12 +2929,14 @@ const RosterProducer = ({ user }) => {
                 <div className="mt-4">
                   <h4 className="font-semibold text-sm mb-2">Member Assignment Summary</h4>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {Object.entries(currentRoster.member_summary).slice(0, 6).map(([memberId, summary]) => (
+                    {currentRoster.member_summary ? Object.entries(currentRoster.member_summary).slice(0, 6).map(([memberId, summary]) => (
                       <div key={memberId} className="flex justify-between text-sm">
                         <span>{summary.name}</span>
                         <span className="text-slate-600">{summary.total_shifts} shifts • {summary.total_hours}h</span>
                       </div>
-                    ))}
+                    )) : (
+                      <p className="text-slate-500 text-sm">No member summary available</p>
+                    )}
                   </div>
                 </div>
               </div>
