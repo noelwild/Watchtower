@@ -2870,13 +2870,14 @@ const RosterProducer = ({ user }) => {
         <Card>
           <CardHeader>
             <CardTitle>
-              {currentRoster ? 'Roster Details' : 'Select a Roster'}
+              {currentRoster ? 'Roster Details - Member 14-Day Spread' : 'Select a Roster'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {currentRoster ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-6">
+                {/* Roster Overview */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm bg-slate-50 p-4 rounded-lg">
                   <div>
                     <span className="text-slate-600">Period:</span>
                     <p className="font-medium">
@@ -2893,17 +2894,137 @@ const RosterProducer = ({ user }) => {
                     </Badge>
                   </div>
                   <div>
-                    <span className="text-slate-600">Total Assignments:</span>
-                    <p className="font-medium">{currentRoster.total_assignments}</p>
+                    <span className="text-slate-600">Total Members:</span>
+                    <p className="font-medium">{currentRoster.summary?.total_members || 0}</p>
                   </div>
                   <div>
-                    <span className="text-slate-600">Station:</span>
-                    <p className="font-medium capitalize">{currentRoster.roster_period.station}</p>
+                    <span className="text-slate-600">Total Hours:</span>
+                    <p className="font-medium">{currentRoster.summary?.total_hours || 0}h</p>
                   </div>
                 </div>
-                
-                {/* Compliance Status */}
-                <div className="mt-4 p-3 rounded-lg" style={{
+
+                {/* 14-Day Member Spread */}
+                {currentRoster.member_summaries && currentRoster.member_summaries.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Date Headers */}
+                    <div className="overflow-x-auto">
+                      <div className="min-w-[1200px]">
+                        <div className="grid grid-cols-[200px_repeat(14,_80px)] gap-1 mb-4">
+                          <div className="font-semibold text-sm bg-slate-100 p-2 rounded">Member Details</div>
+                          {currentRoster.date_range?.map((date, index) => {
+                            const dateObj = new Date(date);
+                            return (
+                              <div key={date} className="text-xs text-center bg-slate-100 p-2 rounded">
+                                <div className="font-medium">{dateObj.toLocaleDateString('en-AU', { day: '2-digit', month: '2-digit' })}</div>
+                                <div className="text-slate-600">{dateObj.toLocaleDateString('en-AU', { weekday: 'short' })}</div>
+                              </div>
+                            );
+                          }) || []}
+                        </div>
+
+                        {/* Member Rows */}
+                        {currentRoster.member_summaries.map((member) => (
+                          <div key={member.member_id} className="mb-4 border border-slate-200 rounded-lg overflow-hidden">
+                            {/* Member Info Header */}
+                            <div className="bg-slate-50 p-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-semibold text-sm">{member.name}</h4>
+                                  <div className="text-xs text-slate-600 space-y-1 mt-1">
+                                    <div><strong>VP:</strong> {member.vp_number} | <strong>Rank:</strong> {member.rank}</div>
+                                    <div><strong>OSTT Date:</strong> {member.ostt_qualification_date ? new Date(member.ostt_qualification_date).toLocaleDateString('en-AU') : 'N/A'} | <strong>ADA:</strong> {member.ada_driver_authority ? 'Yes' : 'No'}</div>
+                                    <div><strong>Special Qualifications:</strong> {member.special_qualifications?.join(', ') || 'None'}</div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-medium">{member.total_shifts} shifts</div>
+                                  <div className="text-sm text-slate-600">{member.total_hours}h total</div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* 14-Day Schedule Grid */}
+                            <div className="grid grid-cols-[200px_repeat(14,_80px)] gap-1 p-3">
+                              <div className="text-xs text-slate-500 p-2">
+                                {member.seniority_years} years seniority
+                              </div>
+                              {member.daily_schedule?.map((day, dayIndex) => (
+                                <div key={day.date} className="text-xs">
+                                  {day.assignments && day.assignments.length > 0 ? (
+                                    <div className="space-y-1">
+                                      {day.assignments.map((assignment, assignIndex) => (
+                                        <div 
+                                          key={assignIndex}
+                                          className={`p-1 rounded text-center text-white text-[10px] font-medium ${
+                                            assignment.shift_type === 'van' ? 'bg-blue-600' :
+                                            assignment.shift_type === 'watchhouse' ? 'bg-green-600' :
+                                            assignment.shift_type === 'corro' ? 'bg-purple-600' :
+                                            assignment.shift_type === 'night' ? 'bg-gray-800' :
+                                            assignment.shift_type === 'early' ? 'bg-orange-500' :
+                                            assignment.shift_type === 'late' ? 'bg-red-600' : 'bg-gray-500'
+                                          }`}
+                                        >
+                                          <div>{assignment.shift_type.toUpperCase()}</div>
+                                          <div>{assignment.start_time}-{assignment.end_time}</div>
+                                        </div>
+                                      ))}
+                                      <div className="text-center text-slate-600 text-[9px] mt-1">
+                                        {day.total_hours}h
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="p-2 text-center text-slate-400 text-[10px]">
+                                      OFF
+                                    </div>
+                                  )}
+                                </div>
+                              )) || []}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Shift Type Legend */}
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-sm mb-3">Shift Type Legend</h4>
+                      <div className="flex flex-wrap gap-4 text-xs">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 bg-blue-600 rounded"></div>
+                          <span>Van Patrol</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 bg-green-600 rounded"></div>
+                          <span>Watchhouse</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 bg-purple-600 rounded"></div>
+                          <span>Corro</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 bg-gray-800 rounded"></div>
+                          <span>Night Shift</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 bg-orange-500 rounded"></div>
+                          <span>Early Shift</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 bg-red-600 rounded"></div>
+                          <span>Late Shift</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No member schedule data available</p>
+                  </div>
+                )}
+
+                {/* Compliance Status - Keep existing */}
+                <div className="p-3 rounded-lg" style={{
                   backgroundColor: currentRoster.compliance_status?.has_violations ? '#fef2f2' : '#f0fdf4',
                   border: `1px solid ${currentRoster.compliance_status?.has_violations ? '#fecaca' : '#bbf7d0'}`
                 }}>
@@ -2923,21 +3044,6 @@ const RosterProducer = ({ user }) => {
                   ) : (
                     <p className="text-green-700 text-sm">✅ All EBA compliance rules satisfied</p>
                   )}
-                </div>
-                
-                {/* Member Summary */}
-                <div className="mt-4">
-                  <h4 className="font-semibold text-sm mb-2">Member Assignment Summary</h4>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {currentRoster.member_summary ? Object.entries(currentRoster.member_summary).slice(0, 6).map(([memberId, summary]) => (
-                      <div key={memberId} className="flex justify-between text-sm">
-                        <span>{summary.name}</span>
-                        <span className="text-slate-600">{summary.total_shifts} shifts • {summary.total_hours}h</span>
-                      </div>
-                    )) : (
-                      <p className="text-slate-500 text-sm">No member summary available</p>
-                    )}
-                  </div>
                 </div>
               </div>
             ) : (
