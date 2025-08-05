@@ -2393,60 +2393,92 @@ const DetailedMemberView = ({ member, isOpen, onClose }) => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div>
-                          <h4 className="font-semibold mb-3">Corro Allocation</h4>
+                          <h4 className="font-semibold mb-3">Workload Distribution</h4>
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                              <span>Member Count:</span>
-                              <span className="font-medium">{memberDetails.equity_tracking.corro_allocation.member_count}</span>
+                              <span>Corro Assignments (3 months):</span>
+                              <span className="font-medium">{memberDetails.equity_tracking?.corro_assignments_3months || 0}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>Station Average:</span>
-                              <span className="font-medium">{memberDetails.equity_tracking.corro_allocation.station_average}</span>
+                              <span>Weekend Assignments:</span>
+                              <span className="font-medium">{memberDetails.equity_tracking?.weekend_assignments || 0}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>Percentile:</span>
-                              <span className="font-medium">{memberDetails.equity_tracking.corro_allocation.percentile}th</span>
+                              <span>Overtime Hours (3 months):</span>
+                              <span className="font-medium">{memberDetails.equity_tracking?.overtime_hours_3months?.toFixed(1) || 0}h</span>
                             </div>
                           </div>
                         </div>
                         
                         <div>
-                          <h4 className="font-semibold mb-3">Shift Distribution</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span>Van Shifts:</span>
-                              <span className="font-medium">{memberDetails.equity_tracking.shift_distribution.van_shifts}%</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Watchhouse:</span>
-                              <span className="font-medium">{memberDetails.equity_tracking.shift_distribution.watchhouse_shifts}%</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Night Shifts:</span>
-                              <span className="font-medium">{memberDetails.equity_tracking.shift_distribution.night_shifts}%</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="font-semibold mb-3">Overall Fairness</h4>
+                          <h4 className="font-semibold mb-3">Fairness Metrics</h4>
                           <div className="text-center">
                             <div className="text-3xl font-bold text-green-600 mb-2">
-                              {memberDetails.equity_tracking.fairness_score}
+                              {memberDetails.equity_tracking?.fairness_score || 0}
                             </div>
                             <p className="text-sm text-slate-600">Fairness Score</p>
                             <div className="mt-2">
                               <Badge className={
-                                memberDetails.equity_tracking.fairness_score >= 80 ? 'bg-green-600' :
-                                memberDetails.equity_tracking.fairness_score >= 60 ? 'bg-orange-500' : 'bg-red-600'
+                                (memberDetails.equity_tracking?.fairness_score || 0) >= 80 ? 'bg-green-600' :
+                                (memberDetails.equity_tracking?.fairness_score || 0) >= 60 ? 'bg-orange-500' : 'bg-red-600'
                               }>
-                                {memberDetails.equity_tracking.fairness_score >= 80 ? 'EXCELLENT' :
-                                 memberDetails.equity_tracking.fairness_score >= 60 ? 'GOOD' : 'NEEDS ATTENTION'}
+                                {(memberDetails.equity_tracking?.fairness_score || 0) >= 80 ? 'EXCELLENT' :
+                                 (memberDetails.equity_tracking?.fairness_score || 0) >= 60 ? 'GOOD' : 'NEEDS ATTENTION'}
                               </Badge>
                             </div>
                           </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-semibold mb-3">Equity Analysis</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="p-3 bg-slate-50 rounded-lg">
+                              <p className="text-xs text-slate-600 mb-1">Workload Balance:</p>
+                              <p className={`font-medium ${
+                                (memberDetails.equity_tracking?.fairness_score || 0) >= 75 ? 'text-green-600' : 
+                                (memberDetails.equity_tracking?.fairness_score || 0) >= 50 ? 'text-orange-600' : 'text-red-600'
+                              }`}>
+                                {(memberDetails.equity_tracking?.fairness_score || 0) >= 75 ? 'Well Balanced' : 
+                                 (memberDetails.equity_tracking?.fairness_score || 0) >= 50 ? 'Moderately Balanced' : 'Needs Attention'}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-slate-50 rounded-lg">
+                              <p className="text-xs text-slate-600 mb-1">Recommendation:</p>
+                              <p className="text-xs">
+                                {(memberDetails.equity_tracking?.fairness_score || 0) >= 75 
+                                  ? 'Current allocation is fair and balanced' 
+                                  : 'Consider adjusting shift assignments for better equity'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Activity Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-4 bg-blue-50 rounded-lg">
+                          <p className="text-lg font-bold text-blue-600">{memberDetails.activity_log?.length || 0}</p>
+                          <p className="text-xs text-slate-600">Total Activities</p>
+                        </div>
+                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                          <p className="text-lg font-bold text-green-600">{memberDetails.equity_tracking?.corro_assignments_3months || 0}</p>
+                          <p className="text-xs text-slate-600">Corro Assignments</p>
+                        </div>
+                        <div className="text-center p-4 bg-orange-50 rounded-lg">
+                          <p className="text-lg font-bold text-orange-600">{memberDetails.equity_tracking?.weekend_assignments || 0}</p>
+                          <p className="text-xs text-slate-600">Weekend Shifts</p>
+                        </div>
+                        <div className="text-center p-4 bg-purple-50 rounded-lg">
+                          <p className="text-lg font-bold text-purple-600">{memberDetails.equity_tracking?.overtime_hours_3months?.toFixed(1) || 0}h</p>
+                          <p className="text-xs text-slate-600">Overtime Hours</p>
                         </div>
                       </div>
                     </CardContent>
