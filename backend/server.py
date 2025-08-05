@@ -986,7 +986,7 @@ async def generate_roster(config: RosterGenerationConfig, session=Depends(get_db
                         shift_type='van',
                         start_time='06:00',
                         end_time='14:00',
-                        assignment_priority='high' if config.enable_fatigue_balancing else 'normal'
+                        assignment_reason='auto_generated_high_priority' if config.enable_fatigue_balancing else 'auto_generated'
                     )
                     session.add(shift_assignment)
                     assignment_count += 1
