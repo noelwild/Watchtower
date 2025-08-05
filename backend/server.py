@@ -958,14 +958,7 @@ async def generate_roster(config: RosterGenerationConfig, session=Depends(get_db
             start_date=start_date,
             end_date=end_date,
             status='draft',
-            created_by='system',
-            configuration=json.dumps({
-                'min_van_coverage': config.min_van_coverage,
-                'min_watchhouse_coverage': config.min_watchhouse_coverage,
-                'enable_fatigue_balancing': config.enable_fatigue_balancing,
-                'consider_preferences': config.consider_preferences,
-                'fair_corro_rotation': config.fair_corro_rotation
-            })
+            created_by='system'
         )
         
         session.add(roster_period)
