@@ -7,7 +7,10 @@ module.exports = function(app) {
       target: 'http://localhost:8001',
       changeOrigin: true,
       secure: false,
-      logLevel: 'debug'
+      logLevel: 'debug',
+      pathRewrite: {
+        '^/api': '/api' // Keep the /api prefix
+      }
     })
   );
 };
